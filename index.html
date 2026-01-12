@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Money Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <a href="#" class="nav-item active" onclick="switchTab('overview')">ภาพรวม</a>
+            <a href="#" class="nav-item" onclick="switchTab('report')">สรุปรายงาน</a>
+        </nav>
+
+        <main id="overview-section" class="animate-enter">
+        <!-- Header Section -->
+        <header class="main-header">
+            <h1>Smart Money <span class="highlight">Tracker</span></h1>
+            <p>จัดการการเงินของคุณได้ง่ายๆ</p>
+        </header>
+
+        <!-- Dashboard Cards -->
+        <section class="dashboard">
+            <div class="card balance-card">
+                <h3>ยอดเงินคงเหลือ</h3>
+                <h2 id="balance">฿0.00</h2>
+            </div>
+            <div class="stats-row">
+                <div class="card income-card">
+                    <h3>รายรับ</h3>
+                    <p id="money-plus" class="money plus">+฿0.00</p>
+                </div>
+                <div class="card expense-card">
+                    <h3>รายจ่าย</h3>
+                    <p id="money-minus" class="money minus">-฿0.00</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Section Removed (Moved Filter to History) -->
+
+        <!-- Transaction Form -->
+        <section class="add-transaction">
+            <h3>เพิ่มรายการใหม่</h3>
+            <form id="form">
+                <div class="form-control">
+                    <label for="text">ชื่อรายการ</label>
+                    <input type="text" id="text" placeholder="ระบุชื่อรายการ..." required>
+                </div>
+                <div class="form-row">
+                    <div class="form-control">
+                        <label>หมวดหมู่</label>
+                        <div class="select-wrapper">
+                            <select id="category">
+                                <option value="food">🍔 อาหาร</option>
+                                <option value="transport">🚕 เดินทาง</option>
+                                <option value="utilities">💡 น้ำ-ไฟ</option>
+                                <option value="shopping">🛍️ ช้อปปิ้ง</option>
+                                <option value="entertainment">🎬 บันเทิง</option>
+                                <option value="salary">💰 เงินเดือน</option>
+                                <option value="business">💼 ธุรกิจ</option>
+                                <option value="other">📝 อื่นๆ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-control">
+                        <label>ประเภทรายการ</label>
+                        <div class="type-toggle">
+                            <input type="radio" name="type" id="type-expense" value="expense" checked>
+                            <label for="type-expense" class="toggle-btn expense-btn">รายจ่าย</label>
+
+                            <input type="radio" name="type" id="type-income" value="income">
+                            <label for="type-income" class="toggle-btn income-btn">รายรับ</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-control">
+                        <label for="amount">จำนวนเงิน</label>
+                        <input type="number" id="amount" placeholder="0" min="0" step="any" required>
+                    </div>
+                    <div class="form-control">
+                        <label for="date">วันที่</label>
+                        <input type="date" id="date" required>
+                    </div>
+                </div>
+                <!-- Custom Category Selection could go here, keeping it simple for now -->
+                <button class="btn">เพิ่มรายการ <i class="fas fa-plus"></i></button>
+            </form>
+        </section>
+
+        <!-- Transaction List -->
+        <section class="history">
+            <div class="history-header">
+                <h3>ประวัติรายการ</h3>
+                <div class="filter-group">
+                    <label for="period-filter" style="display:none;">แสดงผล:</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="month" id="month-picker" style="display: none;">
+                        <select id="period-filter">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="week">สัปดาห์นี้</option>
+                            <option value="month">เลือกเดือน...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <ul id="list" class="list">
+                <!-- Transactions will be injected here -->
+                <!-- Example:
+                <li class="minus">
+                    Lunch <span>-฿120</span><button class="delete-btn">x</button>
+                </li> 
+                -->
+            </ul>
+        </section>
+        </main> <!-- End Overview Section -->
+
+        <!-- Report Section -->
+        <main id="report-section" style="display: none;" class="animate-enter">
+            <div class="report-header" style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+                <!-- Report Type Toggle (Income/Expense) -->
+                <div class="type-toggle" style="width: 240px; height: 44px; margin-bottom: 0.5rem;">
+                    <input type="radio" name="report-type" id="report-type-expense" value="expense" checked>
+                    <label for="report-type-expense" class="toggle-btn expense-btn">รายจ่าย</label>
+
+                    <input type="radio" name="report-type" id="report-type-income" value="income">
+                    <label for="report-type-income" class="toggle-btn income-btn">รายรับ</label>
+                </div>
+
+                <!-- Time Filter Controls -->
+                <div style="display: flex; gap: 0.5rem; align-items: center; background: white; padding: 0.5rem; border-radius: 16px; box-shadow: var(--shadow-sm);">
+                    <!-- Mode Select -->
+                     <select id="report-period-mode" class="premium-month-picker" style="padding: 0.5rem 1rem; font-size: 0.9rem; width: auto;">
+                        <option value="month">รายเดือน</option>
+                        <option value="week">รายสัปดาห์</option>
+                    </select>
+
+                    <!-- Date Pickers -->
+                    <input type="month" id="report-month-picker" class="premium-month-picker" style="font-size: 0.9rem;">
+                    <input type="week" id="report-week-picker" class="premium-month-picker" style="font-size: 0.9rem; display: none;">
+                </div>
+            </div>
+
+            <section class="chart-container">
+                <canvas id="expense-chart"></canvas>
+            </section>
+            
+            <!-- Insight Card -->
+            <div id="insight-container">
+                <!-- Injected via JS -->
+            </div>
+        </main>
+
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        function switchTab(tab) {
+            const overview = document.getElementById('overview-section');
+            const report = document.getElementById('report-section');
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            if (tab === 'overview') {
+                overview.style.display = 'block';
+                report.style.display = 'none';
+                navItems[0].classList.add('active');
+                navItems[1].classList.remove('active');
+            } else {
+                overview.style.display = 'none';
+                report.style.display = 'block';
+                navItems[0].classList.remove('active');
+                navItems[1].classList.add('active');
+                if (typeof updateChart === 'function') updateChart();
+            }
+        }
+    </script>
+</body>
+</html>
