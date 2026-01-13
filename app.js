@@ -467,9 +467,14 @@ function updateChart() {
     const ctx = document.getElementById('expense-chart');
     if (!ctx) return; 
 
-    // Determine Mode (Expense vs Income)
+    // Determine Mode (Expense vs Income vs Comparison)
     const isExpenseRadio = document.getElementById('report-type-expense');
-    const isExpense = isExpenseRadio ? isExpenseRadio.checked : true;
+    const isComparisonRadio = document.getElementById('report-type-comparison');
+    
+    let reportType = 'expense';
+    if (isExpenseRadio && isExpenseRadio.checked) reportType = 'expense';
+    else if (isComparisonRadio && isComparisonRadio.checked) reportType = 'comparison';
+    else reportType = 'income';
 
     let currentTransactions = transactions; 
     const now = new Date();
@@ -498,64 +503,90 @@ function updateChart() {
     } else if (mode === 'week') {
         let selectedWeekVal = reportWeekPicker ? reportWeekPicker.value : '';
         const getWeekStr = (date) => {
-             const d = new Date(date);
-             d.setHours(0, 0, 0, 0);
-             d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-             const yearStart = new Date(d.getFullYear(), 0, 1);
-             const weekNo = Math.ceil(( ( (d - yearStart) / 86400000 ) + 1) / 7);
-             return `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+            const tempDate = new Date(date.valueOf());
+            tempDate.setDate(tempDate.getDate() + 4 - (tempDate.getDay() || 7));
+            const year = tempDate.getFullYear();
+            const weekNo = Math.ceil((((tempDate - new Date(year, 0, 1)) / 86400000) + 1) / 7);
+            return `${year}-W${String(weekNo).padStart(2, '0')}`;
         };
 
-        if (!selectedWeekVal) {
-             selectedWeekVal = getWeekStr(now);
-             if(reportWeekPicker) reportWeekPicker.value = selectedWeekVal;
+        if (selectedWeekVal) {
+             currentTransactions = transactions.filter(t => getWeekStr(new Date(t.date)) === selectedWeekVal);
+        } else if (reportWeekPicker) {
+             const currentWeekStr = getWeekStr(now);
+             reportWeekPicker.value = currentWeekStr;
+             currentTransactions = transactions.filter(t => getWeekStr(new Date(t.date)) === currentWeekStr);
         }
-
-        currentTransactions = transactions.filter(t => {
-            return getWeekStr(t.date) === selectedWeekVal;
-        });
     }
-    
-    const filteredData = currentTransactions.filter(t => isExpense ? t.amount < 0 : t.amount > 0);
-    
-    const categoryTotals = {};
-    filteredData.forEach(t => {
-        const cat = t.category || 'other';
-        const amount = Math.abs(t.amount);
-        if (categoryTotals[cat]) {
-            categoryTotals[cat] += amount;
-        } else {
-            categoryTotals[cat] = amount;
-        }
-    });
 
-    const labels = Object.keys(categoryTotals).map(cat => {
-         const map = {
+    // Process Data based on Report Type
+    let labels = [];
+    let backgroundColors = [];
+    let dataValues = [];
+    
+    // If Comparison Mode
+    if (reportType === 'comparison') {
+        labels = ['รายรับ', 'รายจ่าย'];
+        backgroundColors = ['#10b981', '#ef4444']; // Green vs Red
+        
+        const totalInc = currentTransactions
+            .filter(t => t.amount > 0)
+            .reduce((acc, t) => acc + t.amount, 0);
+            
+        const totalExp = Math.abs(currentTransactions
+            .filter(t => t.amount < 0)
+            .reduce((acc, t) => acc + t.amount, 0));
+            
+        dataValues = [totalInc, totalExp];
+        
+        // Pass special flag or data to analysis card if needed, 
+        // but for now updateInsightCard handles general financial health via total transactions anyway.
+        // We might want to clear specific category analysis or show a summary.
+        updateInsightCard({}, false); // Clear category insight for now, or we can make a specific comparison insight
+    } else {
+        // Existing Income/Expense Category Logic
+        const isExpense = (reportType === 'expense');
+        const categoryTotals = {};
+        
+        currentTransactions.forEach(transaction => {
+            if (isExpense && transaction.amount < 0) {
+                const cat = transaction.category;
+                const amt = Math.abs(transaction.amount);
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
+            } else if (!isExpense && transaction.amount > 0) {
+                const cat = transaction.category;
+                const amt = transaction.amount;
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
+            }
+        });
+
+        const map = {
             food: 'อาหาร', transport: 'เดินทาง', utilities: 'น้ำ-ไฟ',
             shopping: 'ช้อปปิ้ง', entertainment: 'บันเทิง', other: 'อื่นๆ',
             salary: 'เงินเดือน', business: 'ธุรกิจ'
-         };
-         return map[cat] || cat;
-    });
+        };
+        
+        labels = Object.keys(categoryTotals).map(cat => map[cat] || cat);
+        dataValues = Object.values(categoryTotals);
+        
+        updateInsightCard(categoryTotals, isExpense);
 
-    const dataValues = Object.values(categoryTotals);
-    
-    updateInsightCard(categoryTotals, isExpense);
-
-    let backgroundColors = [];
-    if (isExpense) {
-        backgroundColors = ['#f59e0b', '#ef4444', '#f97316', '#eab308', '#dc2626', '#78350f'];
-    } else {
-        backgroundColors = ['#10b981', '#3b82f6', '#06b6d4', '#6366f1', '#059669', '#1d4ed8'];
+        if (isExpense) {
+            backgroundColors = ['#f59e0b', '#ef4444', '#f97316', '#eab308', '#dc2626', '#78350f'];
+        } else {
+            backgroundColors = ['#10b981', '#3b82f6', '#06b6d4', '#6366f1', '#059669', '#1d4ed8'];
+        }
     }
 
     if (expenseChart) {
         expenseChart.destroy();
     }
 
-    if (dataValues.length === 0) {
+    // Check if empty (only for visual valid check)
+    const totalData = dataValues.reduce((a,b)=>a+b,0);
+    if (totalData === 0) {
         const container = document.getElementById('insight-container');
-        if (container) container.innerHTML = `<div style="text-align:center; color:#94a3b8; margin-top:2rem;">ไม่มีข้อมูล${isExpense ? 'รายจ่าย' : 'รายรับ'}</div>`;
+        if (container) container.innerHTML = `<div style="text-align:center; color:#94a3b8; margin-top:2rem;">ไม่มีข้อมูลในช่วงเวลานี้</div>`;
         return;
     }
 
@@ -596,8 +627,8 @@ function updateChart() {
 function updateInsightCard(categoryTotals, isExpense = true) {
     const container = document.getElementById('insight-container');
     if (!container) return;
-
-    // --- 1. Calculate Summary Data ---
+    
+    // Always Calculate Financial Health First (for Advice Box)
     const allTransactions = transactions; // Use global transactions
     const totalIncome = allTransactions
         .filter(t => t.amount > 0)
@@ -627,6 +658,31 @@ function updateInsightCard(categoryTotals, isExpense = true) {
     }
 
     // --- 3. Find Top Category (Existing Logic) ---
+    const isComparisonMode = (Object.keys(categoryTotals).length === 0 && !isExpense); // Check if called from comparison mode
+
+    if (isComparisonMode) {
+        container.innerHTML = `
+            <div class="insight-card">
+                <div class="insight-header">
+                    <i class="fas fa-chart-pie"></i> สรุปภาพรวม
+                </div>
+                <div style="font-size:1.1rem; font-weight:600; margin-bottom:10px;">
+                    รายรับ: <span style="color:#10b981;">฿${totalIncome.toLocaleString('th-TH')}</span>
+                </div>
+                <div style="font-size:1.1rem; font-weight:600; margin-bottom:15px;">
+                    รายจ่าย: <span style="color:#ef4444;">฿${totalExpense.toLocaleString('th-TH')}</span>
+                </div>
+                <div class="advice-box advice-${healthStatus}">
+                    <div style="font-weight:bold; margin-bottom:5px;">
+                        ${healthStatus === 'good' ? '✨' : (healthStatus === 'warning' ? '⚠️' : '🚨')} ${adviceTitle}
+                    </div>
+                    ${adviceText}
+                </div>
+            </div>
+        `;
+        return;
+    }
+
     if (Object.keys(categoryTotals).length === 0) {
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); margin-top:2rem;">ยังไม่มีข้อมูลสำหรับวิเคราะห์</div>`;
         return;
@@ -689,13 +745,17 @@ function updateInsightCard(categoryTotals, isExpense = true) {
 }
 
 
+const reportTypeComparison = document.getElementById('report-type-comparison');
+
 // Global Chart Event Listeners (ensure they are attached to window update logic is handled by init/updateChart)
 if (reportTypeExpense) reportTypeExpense.addEventListener('change', updateChart);
 if (reportTypeIncome) reportTypeIncome.addEventListener('change', updateChart);
+if (reportTypeComparison) reportTypeComparison.addEventListener('change', updateChart);
+
 if (reportPeriodMode) {
     reportPeriodMode.addEventListener('change', (e) => {
-        const mode = e.target.value;
-        if (mode === 'month') {
+        // Toggle Pickers
+        if (e.target.value === 'month') {
             if(reportMonthPicker) reportMonthPicker.style.display = 'block';
             if(reportWeekPicker) reportWeekPicker.style.display = 'none';
         } else {

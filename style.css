@@ -505,9 +505,22 @@ body, .card, .top-nav, .glass-pill-container, .list li {
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
-[data-theme='dark'] #type-income:checked ~ .income-btn {
+[data-theme='dark'] #type-income:checked ~ .income-btn,
+[data-theme='dark'] #report-type-income:checked ~ .income-btn {
     background: #064e3b; /* Dark Green */
     color: #6ee7b7; /* Light Green */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+#report-type-comparison:checked ~ .comparison-btn {
+    background: white;
+    color: #8b5cf6; /* Violet */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+[data-theme='dark'] #report-type-comparison:checked ~ .comparison-btn {
+    background: #4c1d95; /* Dark Violet */
+    color: #a78bfa; /* Light Violet */
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
