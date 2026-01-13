@@ -1,3 +1,44 @@
+// Import Firebase SDKs
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { 
+    getAuth, 
+    GoogleAuthProvider, 
+    signInWithPopup, 
+    signOut, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    deleteDoc, 
+    doc, 
+    query, 
+    where, 
+    onSnapshot,
+    orderBy,
+    serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDHhVXPVnNbXf3EMvSoVDoJn-TjMDweAtM",
+  authDomain: "money-tracker-a3109.firebaseapp.com",
+  projectId: "money-tracker-a3109",
+  storageBucket: "money-tracker-a3109.firebasestorage.app",
+  messagingSenderId: "15598763342",
+  appId: "1:15598763342:web:d3b100b808bf258ca5b21f",
+  measurementId: "G-H1CF49SJZB"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+console.log("Firebase initialized"); // Debug
+
+// DOM Elements
 const balance = document.getElementById("balance");
 const money_plus = document.getElementById("money-plus");
 const money_minus = document.getElementById("money-minus");
@@ -9,25 +50,157 @@ const dateInput = document.getElementById("date");
 const categorySelect = document.getElementById("category");
 const periodFilter = document.getElementById("period-filter");
 const monthPicker = document.getElementById("month-picker");
+const loginBtnMain = document.getElementById("login-btn-main");
+const loginPage = document.getElementById("login-page");
+const mainApp = document.getElementById("main-app");
+const userSection = document.getElementById("user-section");
+const themeToggleBtn = document.getElementById("theme-toggle");
 
+// --- Theme Management ---
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+    if (!themeToggleBtn) return;
+    const icon = themeToggleBtn.querySelector('i');
+    if (theme === 'dark') {
+        icon.className = 'fas fa-sun';
+        themeToggleBtn.style.color = '#f59e0b'; // Yellow for sun
+    } else {
+        icon.className = 'fas fa-moon';
+        themeToggleBtn.style.color = '#64748b'; // Muted for moon
+    }
+}
+
+// Initialize Theme
+initTheme();
+
+// Event Listener for Theme Toggle
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', toggleTheme);
+}
+
+
+let transactions = [];
 let expenseChart = null;
-
-// Initialize local storage interactions
-const localStorageTransactions = JSON.parse(
-  localStorage.getItem("money_tracker_transactions")
-);
-
-let transactions =
-  localStorage.getItem("money_tracker_transactions") !== null
-    ? localStorageTransactions
-    : [];
+let unsubscribe = null; // To stop listening when logged out
+let currentUser = null;
 
 // Set default date to today
-dateInput.valueAsDate = new Date();
+if(dateInput) dateInput.valueAsDate = new Date();
+
+// --- Authentication Functions ---
+
+const login = async () => {
+    console.log("Login button clicked"); // Debug
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Login failed:", error);
+        alert("Login failed: " + error.code + " - " + error.message);
+    }
+};
+
+const logout = async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Logout failed:", error);
+    }
+};
+
+// Attach to window so HTML can call them
+window.login = login;
+window.logout = logout;
+
+// Event Listeners for Login Buttons
+if (loginBtnMain) {
+    loginBtnMain.addEventListener("click", login);
+}
+
+// Auth State Listener
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (user) {
+        // User is signed in
+        console.log("User logged in:", user.email);
+        
+        // Hide Login Page, Show Main App
+        loginPage.style.display = "none";
+        mainApp.style.display = "block"; // Changed to block to fix layout
+
+        // Update User Profile in Nav
+        userSection.innerHTML = `
+            <div class="user-profile-pill">
+                <span class="user-name">${user.displayName.split(' ')[0]}</span>
+                <img src="${user.photoURL}" alt="Profile" class="user-avatar">
+                <button onclick="logout()" class="logout-icon-btn" title="ออกจากระบบ">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        `;
+
+        // Start Listening to Data
+        loadData(user.uid);
+    } else {
+        // User is signed out
+        console.log("User logged out");
+        
+        // Show Login Page, Hide Main App
+        loginPage.style.display = "flex";
+        mainApp.style.display = "none";
+
+        // Clear Data
+        transactions = [];
+        init();
+        if (unsubscribe) unsubscribe();
+    }
+});
+
+
+// --- Firestore Data Functions ---
+
+function loadData(uid) {
+    if (unsubscribe) unsubscribe();
+
+    // Simplify query to avoid Indexing errors for now
+    const q = query(
+        collection(db, "transactions"), 
+        where("uid", "==", uid)
+        // orderBy("date", "desc") // Temporarily remove if index is creating issues
+    );
+
+    unsubscribe = onSnapshot(q, (snapshot) => {
+        transactions = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        init(); // Re-render app with new data
+    });
+}
 
 // Add transaction
-function addTransaction(e) {
+async function addTransaction(e) {
+  console.log('Form submission started'); // Debug
   e.preventDefault();
+
+  if (!currentUser) {
+      alert("กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล");
+      return;
+  }
 
   if (
     text.value.trim() === "" ||
@@ -43,33 +216,49 @@ function addTransaction(e) {
   const rawAmount = Math.abs(+amount.value); // Ensure positive first
   const finalAmount = isExpense ? -rawAmount : rawAmount;
   
-  // Get Category (default to 'other' if null)
+  // Get Category
   const category = categorySelect ? categorySelect.value : 'other';
 
-  const transaction = {
-    id: generateID(),
+  const newTransaction = {
+    uid: currentUser.uid,
     text: text.value,
     amount: finalAmount,
     date: dateInput.value,
-    category: category 
+    category: category,
+    createdAt: serverTimestamp() 
   };
 
-  transactions.push(transaction);
-
-  addTransactionDOM(transaction);
-  updateValues();
-  updateLocalStorage();
-  updateChart(); // Update chart when adding
-
-  text.value = "";
-  amount.value = "";
-  document.getElementById('type-expense').checked = true;
+  try {
+      await addDoc(collection(db, "transactions"), newTransaction);
+      
+      // Clear form
+      text.value = "";
+      amount.value = "";
+      document.getElementById('type-expense').checked = true;
+  } catch (err) {
+      console.error("Error adding document: ", err);
+      alert("ไม่สามารถบันทึกข้อมูลได้");
+  }
 }
 
-// Generate random ID
-function generateID() {
-  return Math.floor(Math.random() * 100000000);
+// Remove transaction
+async function removeTransaction(id) {
+  if (!currentUser) return;
+  if (!confirm('ยืนยันลบรายการนี้?')) return;
+
+  try {
+      await deleteDoc(doc(db, "transactions", id));
+  } catch (err) {
+      console.error("Error deleting document: ", err);
+      alert("ไม่สามารถลบข้อมูลได้");
+  }
 }
+
+// Expose removeTransaction to window for HTML onclick
+window.removeTransaction = removeTransaction;
+
+
+// --- UI Functions (Mostly Unchanged logic, just data source) ---
 
 // Add transactions to DOM list
 function addTransactionDOM(transaction) {
@@ -90,30 +279,39 @@ function addTransactionDOM(transaction) {
     day: "numeric",
   });
   
-  // Category Label Map
+  // Category Label & Icon Map
   const categoryMap = {
-      food: 'อาหาร',
-      transport: 'เดินทาง',
-      utilities: 'น้ำ-ไฟ',
-      shopping: 'ช้อปปิ้ง',
-      entertainment: 'บันเทิง',
-      salary: 'เงินเดือน',
-      business: 'ธุรกิจ',
-      other: 'อื่นๆ'
+      food: { label: 'อาหาร', icon: '🍔', color: '#f59e0b' },
+      transport: { label: 'เดินทาง', icon: '🚕', color: '#3b82f6' },
+      utilities: { label: 'น้ำ-ไฟ', icon: '💡', color: '#eab308' },
+      shopping: { label: 'ช้อปปิ้ง', icon: '🛍️', color: '#ec4899' },
+      entertainment: { label: 'บันเทิง', icon: '🎬', color: '#8b5cf6' },
+      salary: { label: 'เงินเดือน', icon: '💰', color: '#10b981' },
+      business: { label: 'ธุรกิจ', icon: '💼', color: '#06b6d4' },
+      other: { label: 'อื่นๆ', icon: '📝', color: '#64748b' }
   };
   
-  const catLabel = categoryMap[transaction.category] || 'อื่นๆ';
+  const catData = categoryMap[transaction.category] || categoryMap.other;
 
   item.classList.add(itemClass);
+  // Premium List Item Structure
   item.innerHTML = `
-    <div class="list-info">
-        <span style="font-weight:600; font-size:1rem;">${transaction.text}</span>
-        <span class="list-date"><span style="color:#f59e0b; margin-right:5px;">[${catLabel}]</span> ${dateStr}</span>
+    <div class="list-left">
+        <div class="list-icon" style="background: ${catData.color}20; color: ${catData.color};">
+            ${catData.icon}
+        </div>
+        <div class="list-info">
+            <span class="list-title">${transaction.text}</span>
+            <span class="list-meta">${dateStr} • ${catData.label}</span>
+        </div>
     </div>
-    <span class="amount">${sign}฿${formattedAmount}</span>
-    <button class="delete-btn" onclick="removeTransaction(${transaction.id})">
-        <i class="fas fa-times"></i>
-    </button>
+    
+    <div class="list-right">
+        <span class="amount ${itemClass}">${sign}${formattedAmount}</span>
+        <button class="delete-btn" onclick="removeTransaction('${transaction.id}')">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
   `;
 
   list.appendChild(item);
@@ -149,23 +347,6 @@ function updateValues() {
   money_minus.innerText = `-฿${formattedExpense}`;
 }
 
-// Remove transaction by ID
-function removeTransaction(id) {
-  transactions = transactions.filter((transaction) => transaction.id !== id);
-
-  updateLocalStorage();
-
-  init();
-}
-
-// Update local storage transaction
-function updateLocalStorage() {
-  localStorage.setItem(
-    "money_tracker_transactions",
-    JSON.stringify(transactions)
-  );
-}
-
 // Filter logic
 function getFilteredTransactions() {
   const filterValue = periodFilter ? periodFilter.value : 'all';
@@ -193,7 +374,7 @@ function getFilteredTransactions() {
                 tDate.getMonth() + 1 === parseInt(pMonth)
             );
         } else {
-             // Default to This Month if no specific month picked (or logic for picker default)
+             // Default to This Month if no specific month picked
              return (
                 tDate.getMonth() === now.getMonth() &&
                 tDate.getFullYear() === now.getFullYear()
@@ -211,11 +392,14 @@ function getFilteredTransactions() {
   });
 }
 
+// Chart Logic
+const reportPeriodMode = document.getElementById('report-period-mode');
+const reportWeekPicker = document.getElementById('report-week-picker');
 const reportMonthPicker = document.getElementById("report-month-picker");
+const reportTypeExpense = document.getElementById('report-type-expense');
+const reportTypeIncome = document.getElementById('report-type-income');
 
-// ... existing code ...
-
-// Custom Plugin for Center Text
+// Chart Plugin
 const centerTextPlugin = {
   id: 'centerText',
   beforeDraw: function(chart) {
@@ -228,7 +412,7 @@ const centerTextPlugin = {
     var fontSize = (height / 114).toFixed(2);
     ctx.font = "bold " + fontSize + "em 'Outfit', sans-serif";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#1e293b"; // Dark text
+    ctx.fillStyle = "#1e293b"; 
 
     // Sum data
     const total = chart.config.data.datasets[0].data.reduce((a, b) => a + b, 0);
@@ -241,7 +425,7 @@ const centerTextPlugin = {
     
     // Label "Total"
     ctx.font = "500 " + (fontSize*0.4).toFixed(2) + "em 'Outfit', sans-serif";
-    ctx.fillStyle = "#64748b"; // Secondary text
+    ctx.fillStyle = "#64748b"; 
     const label = "ยอดรวม";
     var labelX = Math.round((width - ctx.measureText(label).width) / 2);
     
@@ -252,41 +436,6 @@ const centerTextPlugin = {
 
 Chart.register(centerTextPlugin);
 
-// *** CHART LOGIC ***
-const reportPeriodMode = document.getElementById('report-period-mode');
-const reportWeekPicker = document.getElementById('report-week-picker');
-const reportTypeExpense = document.getElementById('report-type-expense');
-const reportTypeIncome = document.getElementById('report-type-income');
-
-// Add listeners if elements exist
-if (reportTypeExpense) reportTypeExpense.addEventListener('change', updateChart);
-if (reportTypeIncome) reportTypeIncome.addEventListener('change', updateChart);
-
-if (reportPeriodMode) {
-    reportPeriodMode.addEventListener('change', (e) => {
-        const mode = e.target.value;
-        if (mode === 'month') {
-            if(reportMonthPicker) reportMonthPicker.style.display = 'block';
-            if(reportWeekPicker) reportWeekPicker.style.display = 'none';
-        } else {
-            if(reportMonthPicker) reportMonthPicker.style.display = 'none';
-            if(reportWeekPicker) {
-                reportWeekPicker.style.display = 'block';
-                if (!reportWeekPicker.value) {
-                     // Default to current week
-                     const now = new Date();
-                     // ISO week date logic is complex, simple approximation for default value:
-                     // NOTE: Creating specific ISO week string (YYYY-Www) is tricky in native JS without libs
-                     // We will let user pick or just updateChart with default logic first
-                }
-            }
-        }
-        updateChart();
-    });
-}
-
-if (reportWeekPicker) reportWeekPicker.addEventListener('change', updateChart);
-
 function updateChart() {
     const ctx = document.getElementById('expense-chart');
     if (!ctx) return; 
@@ -295,7 +444,6 @@ function updateChart() {
     const isExpenseRadio = document.getElementById('report-type-expense');
     const isExpense = isExpenseRadio ? isExpenseRadio.checked : true;
 
-    // Use Report Specific Filter
     let currentTransactions = transactions; 
     const now = new Date();
     
@@ -315,17 +463,13 @@ function updateChart() {
             reportMonthPicker.value = `${now.getFullYear()}-${m}`;
         }
 
-        // Filter by Date (Month)
         currentTransactions = transactions.filter(t => {
             const tDate = new Date(t.date);
             return tDate.getFullYear() === useYear && tDate.getMonth() === useMonth;
         });
 
     } else if (mode === 'week') {
-        // Week filtering
         let selectedWeekVal = reportWeekPicker ? reportWeekPicker.value : '';
-        
-        // Helper to get week info from transaction date
         const getWeekStr = (date) => {
              const d = new Date(date);
              d.setHours(0, 0, 0, 0);
@@ -336,7 +480,6 @@ function updateChart() {
         };
 
         if (!selectedWeekVal) {
-             // If no week selected, default to current week
              selectedWeekVal = getWeekStr(now);
              if(reportWeekPicker) reportWeekPicker.value = selectedWeekVal;
         }
@@ -346,13 +489,12 @@ function updateChart() {
         });
     }
     
-    // Filter by Type (Expense < 0, Income > 0)
     const filteredData = currentTransactions.filter(t => isExpense ? t.amount < 0 : t.amount > 0);
     
     const categoryTotals = {};
     filteredData.forEach(t => {
         const cat = t.category || 'other';
-        const amount = Math.abs(t.amount); // Always positive for chart
+        const amount = Math.abs(t.amount);
         if (categoryTotals[cat]) {
             categoryTotals[cat] += amount;
         } else {
@@ -371,15 +513,12 @@ function updateChart() {
 
     const dataValues = Object.values(categoryTotals);
     
-    // Suggest "Top Spending/Income" Insight
     updateInsightCard(categoryTotals, isExpense);
 
     let backgroundColors = [];
     if (isExpense) {
-        // Red/Orange/Yellow Theme
         backgroundColors = ['#f59e0b', '#ef4444', '#f97316', '#eab308', '#dc2626', '#78350f'];
     } else {
-        // Green/Blue/Teal Theme
         backgroundColors = ['#10b981', '#3b82f6', '#06b6d4', '#6366f1', '#059669', '#1d4ed8'];
     }
 
@@ -388,7 +527,6 @@ function updateChart() {
     }
 
     if (dataValues.length === 0) {
-        // Clear Insight if no data
         const container = document.getElementById('insight-container');
         if (container) container.innerHTML = `<div style="text-align:center; color:#94a3b8; margin-top:2rem;">ไม่มีข้อมูล${isExpense ? 'รายจ่าย' : 'รายรับ'}</div>`;
         return;
@@ -437,7 +575,6 @@ function updateInsightCard(categoryTotals, isExpense = true) {
         return;
     }
 
-    // Find Max
     let maxCat = '';
     let maxVal = 0;
     for (const [cat, val] of Object.entries(categoryTotals)) {
@@ -447,7 +584,6 @@ function updateInsightCard(categoryTotals, isExpense = true) {
         }
     }
     
-    // Mappings
     const map = {
         food: 'อาหาร', transport: 'เดินทาง', utilities: 'น้ำ-ไฟ',
         shopping: 'ช้อปปิ้ง', entertainment: 'บันเทิง', other: 'อื่นๆ',
@@ -482,28 +618,50 @@ function updateInsightCard(categoryTotals, isExpense = true) {
     `;
 }
 
-// Event Listeners
-if (reportMonthPicker) {
-    reportMonthPicker.addEventListener("change", () => {
+// Global Chart Event Listeners (ensure they are attached to window update logic is handled by init/updateChart)
+if (reportTypeExpense) reportTypeExpense.addEventListener('change', updateChart);
+if (reportTypeIncome) reportTypeIncome.addEventListener('change', updateChart);
+if (reportPeriodMode) {
+    reportPeriodMode.addEventListener('change', (e) => {
+        const mode = e.target.value;
+        if (mode === 'month') {
+            if(reportMonthPicker) reportMonthPicker.style.display = 'block';
+            if(reportWeekPicker) reportWeekPicker.style.display = 'none';
+        } else {
+            if(reportMonthPicker) reportMonthPicker.style.display = 'none';
+            if(reportWeekPicker) {
+                reportWeekPicker.style.display = 'block';
+                if (!reportWeekPicker.value) {
+                     // Default to current week
+                     const now = new Date();
+                }
+            }
+        }
         updateChart();
     });
 }
+if (reportWeekPicker) reportWeekPicker.addEventListener('change', updateChart);
+if (reportMonthPicker) reportMonthPicker.addEventListener("change", updateChart);
 
 
 // Init app
 function init() {
   list.innerHTML = "";
+  // Data is already sorted by Query, but filter logic takes over.
+  // Note: getFilteredTransactions uses global `transactions` array which is now populated from Firestore
   const filtered = getFilteredTransactions();
 
-  // Sort by date desc (newest first)
+  // Sort again client side just to be safe if filter change affects it, although Query did it.
   filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   filtered.forEach(addTransactionDOM);
   updateValues();
+  // Expose updateChart globally or call it here
+  window.updateChart = updateChart; 
   updateChart();
 }
 
-// Event Listeners
+// Main Form Listeners
 form.addEventListener("submit", addTransaction);
 
 if (periodFilter) {
@@ -524,9 +682,8 @@ if (periodFilter) {
 }
 
 if (monthPicker) {
-    monthPicker.addEventListener("change", () => {
-        init();
-    });
+    monthPicker.addEventListener("change", init);
 }
 
+// Initial Call (Will show empty until Auth loads)
 init();

@@ -12,18 +12,43 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="app-container">
+    <!-- Login Page -->
+    <div id="login-page" class="login-container">
+        <div class="login-card">
+            <div class="login-icon">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <h1>Smart Money <span class="highlight">Tracker</span></h1>
+            <p>วางแผนการเงินสู่อนาคตที่มั่นคง เริ่มต้นวันนี้</p>
+            <button id="login-btn-main" class="btn login-google-btn">
+                <i class="fab fa-google"></i> เข้าสู่ระบบด้วย Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App (Hidden by default) -->
+    <div id="main-app" class="app-container" style="display: none;">
         <!-- Top Navigation -->
-        <nav class="top-nav">
-            <a href="#" class="nav-item active" onclick="switchTab('overview')">ภาพรวม</a>
-            <a href="#" class="nav-item" onclick="switchTab('report')">สรุปรายงาน</a>
-        </nav>
+       <nav class="top-nav">
+        <a href="#overview" class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="#report" class="nav-item" id="nav-report" onclick="switchTab('report')">
+            <i class="fas fa-chart-pie"></i>
+        </a>
+        <button id="theme-toggle" class="nav-item" style="background:none; border:none; cursor:pointer; margin-left:auto; font-size:1.1rem;">
+            <i class="fas fa-moon"></i>
+        </button>  
+        <div id="user-section" class="user-section">
+            <!-- User info/Login btn injected here -->
+        </div>
+    </nav>
 
         <main id="overview-section" class="animate-enter">
         <!-- Header Section -->
         <header class="main-header">
-            <h1>Smart Money <span class="highlight">Tracker</span></h1>
-            <p>จัดการการเงินของคุณได้ง่ายๆ</p>
+            <h1>ภาพรวม<span class="highlight">บัญชี</span></h1>
+            <p style="opacity: 0.8;">สถานะทางการเงินปัจจุบันของคุณ</p>
         </header>
 
         <!-- Dashboard Cards -->
@@ -43,8 +68,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- Controls Section Removed (Moved Filter to History) -->
 
         <!-- Transaction Form -->
         <section class="add-transaction">
@@ -91,8 +114,7 @@
                         <input type="date" id="date" required>
                     </div>
                 </div>
-                <!-- Custom Category Selection could go here, keeping it simple for now -->
-                <button class="btn">เพิ่มรายการ <i class="fas fa-plus"></i></button>
+                <button type="submit" class="btn">เพิ่มรายการ <i class="fas fa-plus"></i></button>
             </form>
         </section>
 
@@ -100,25 +122,17 @@
         <section class="history">
             <div class="history-header">
                 <h3>ประวัติรายการ</h3>
-                <div class="filter-group">
-                    <label for="period-filter" style="display:none;">แสดงผล:</label>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <input type="month" id="month-picker" style="display: none;">
-                        <select id="period-filter">
-                            <option value="all">ทั้งหมด</option>
-                            <option value="week">สัปดาห์นี้</option>
-                            <option value="month">เลือกเดือน...</option>
-                        </select>
-                    </div>
+                <div class="glass-pill-container">
+                    <select id="period-filter" class="glass-input">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="week">สัปดาห์นี้</option>
+                        <option value="month">เลือกเดือน...</option>
+                    </select>
+                    <input type="month" id="month-picker" class="glass-input" style="display: none;">
                 </div>
             </div>
             <ul id="list" class="list">
                 <!-- Transactions will be injected here -->
-                <!-- Example:
-                <li class="minus">
-                    Lunch <span>-฿120</span><button class="delete-btn">x</button>
-                </li> 
-                -->
             </ul>
         </section>
         </main> <!-- End Overview Section -->
@@ -136,16 +150,16 @@
                 </div>
 
                 <!-- Time Filter Controls -->
-                <div style="display: flex; gap: 0.5rem; align-items: center; background: white; padding: 0.5rem; border-radius: 16px; box-shadow: var(--shadow-sm);">
+                <div class="glass-pill-container" style="margin-top: 5px;">
                     <!-- Mode Select -->
-                     <select id="report-period-mode" class="premium-month-picker" style="padding: 0.5rem 1rem; font-size: 0.9rem; width: auto;">
+                     <select id="report-period-mode" class="glass-input">
                         <option value="month">รายเดือน</option>
                         <option value="week">รายสัปดาห์</option>
                     </select>
-
+                    <div class="divider"></div>
                     <!-- Date Pickers -->
-                    <input type="month" id="report-month-picker" class="premium-month-picker" style="font-size: 0.9rem;">
-                    <input type="week" id="report-week-picker" class="premium-month-picker" style="font-size: 0.9rem; display: none;">
+                    <input type="month" id="report-month-picker" class="glass-input">
+                    <input type="week" id="report-week-picker" class="glass-input" style="display: none;">
                 </div>
             </div>
 
@@ -155,13 +169,12 @@
             
             <!-- Insight Card -->
             <div id="insight-container">
-                <!-- Injected via JS -->
             </div>
         </main>
 
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
     <script>
         function switchTab(tab) {
             const overview = document.getElementById('overview-section');
