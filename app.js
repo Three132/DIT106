@@ -258,6 +258,33 @@ async function removeTransaction(id) {
 window.removeTransaction = removeTransaction;
 
 
+// --- Login Subtitle Rotator ---
+const subtitles = [
+    "วางแผนการเงินสู่อนาคตที่มั่นคง เริ่มต้นวันนี้",
+    "จดครบ จบทุกเรื่องเงิน... ง่ายๆ แค่ปลายนิ้ว",
+    "รู้ทันทุกการใช้จ่าย เก็บออมได้ตามเป้าหมาย",
+    "เปลี่ยนเรื่องเงินให้เป็นเรื่องง่าย ด้วยตัวคุณเอง"
+];
+let subtitleIndex = 0;
+
+function rotateSubtitle() {
+    const el = document.getElementById('login-subtitle');
+    if (!el) return;
+
+    el.classList.add('fade-out');
+    
+    setTimeout(() => {
+        subtitleIndex = (subtitleIndex + 1) % subtitles.length;
+        el.innerText = subtitles[subtitleIndex];
+        el.classList.remove('fade-out');
+    }, 500); // Match CSS transition time
+}
+
+// Start Rotation if on login page
+if (document.getElementById('login-subtitle')) {
+    setInterval(rotateSubtitle, 4000); // Change every 4 seconds
+}
+
 // --- UI Functions (Mostly Unchanged logic, just data source) ---
 
 // Add transactions to DOM list
@@ -570,20 +597,53 @@ function updateInsightCard(categoryTotals, isExpense = true) {
     const container = document.getElementById('insight-container');
     if (!container) return;
 
+    // --- 1. Calculate Summary Data ---
+    const allTransactions = transactions; // Use global transactions
+    const totalIncome = allTransactions
+        .filter(t => t.amount > 0)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    // Expenses are stored as negative, so convert to positive for calculation
+    const totalExpense = Math.abs(allTransactions
+        .filter(t => t.amount < 0)
+        .reduce((sum, t) => sum + t.amount, 0));
+
+    const balance = totalIncome - totalExpense;
+    const savingsRate = totalIncome > 0 ? ((balance / totalIncome) * 100) : 0;
+    
+    // --- 2. Determine Health Status & Advice ---
+    let healthStatus = 'good'; // good, warning, danger
+    let adviceTitle = "เยี่ยมมาก! สุขภาพการเงินแข็งแรง";
+    let adviceText = "คุณมีการจัดการรายรับ-รายจ่ายที่ดี มีเงินออมคงเหลือ พยายามรักษาแบบนี้ต่อไปนะครับ";
+    
+    if (balance < 0) {
+        healthStatus = 'danger';
+        adviceTitle = "ระวัง! รายจ่ายเกินรายรับ";
+        adviceText = `ขณะนี้คุณติดลบอยู่ ฿${Math.abs(balance).toLocaleString()} ควรลดค่าใช้จ่ายที่ไม่จำเป็น หรือหารายได้เสริมด่วนครับ`;
+    } else if (savingsRate < 20) {
+        healthStatus = 'warning';
+        adviceTitle = "เริ่มตึงมือแล้วนะ";
+        adviceText = `คุณมีเงินออมเหลือเพียง ${savingsRate.toFixed(1)}% ของรายรับ (ควรมีสัก 20%) ลองลดค่ากาแฟหรือช้อปปิ้งลงหน่อยดีไหม?`;
+    }
+
+    // --- 3. Find Top Category (Existing Logic) ---
     if (Object.keys(categoryTotals).length === 0) {
-        container.innerHTML = '';
+        container.innerHTML = `<div style="text-align:center; color:var(--text-muted); margin-top:2rem;">ยังไม่มีข้อมูลสำหรับวิเคราะห์</div>`;
         return;
     }
 
     let maxCat = '';
     let maxVal = 0;
+    let totalPie = 0;
     for (const [cat, val] of Object.entries(categoryTotals)) {
+        totalPie += val;
         if (val > maxVal) {
             maxVal = val;
             maxCat = cat;
         }
     }
-    
+    const maxPercent = totalPie > 0 ? ((maxVal / totalPie) * 100).toFixed(1) : 0;
+
     const map = {
         food: 'อาหาร', transport: 'เดินทาง', utilities: 'น้ำ-ไฟ',
         shopping: 'ช้อปปิ้ง', entertainment: 'บันเทิง', other: 'อื่นๆ',
@@ -591,32 +651,43 @@ function updateInsightCard(categoryTotals, isExpense = true) {
     };
     
     const iconMap = {
-        food: '🍔', transport: '🚕', utilities: '💡',
-        shopping: '🛍️', entertainment: '🎬', other: '📝',
-        salary: '💰', business: '💼'
+        food: 'fas fa-utensils', transport: 'fas fa-bus', utilities: 'fas fa-bolt',
+        shopping: 'fas fa-shopping-bag', entertainment: 'fas fa-gamepad', other: 'fas fa-box',
+        salary: 'fas fa-briefcase', business: 'fas fa-store'
     };
 
-    const label = map[maxCat] || maxCat;
-    const icon = iconMap[maxCat] || (isExpense ? '💸' : '💵');
-    const totalVal = Object.values(categoryTotals).reduce((a,b)=>a+b,0);
-    const percent = totalVal > 0 ? ((maxVal / totalVal) * 100).toFixed(0) : 0;
+    const displayCat = map[maxCat] || maxCat;
+    const displayIcon = iconMap[maxCat] || 'fas fa-circle';
+    const displayVal = Number(maxVal).toLocaleString('th-TH');
 
-    const titleText = isExpense ? `รายจ่ายสูงสุด (${percent}%)` : `รายรับสูงสุด (${percent}%)`;
-    const descText = isExpense 
-        ? `คุณใช้จ่ายกับ <span class="highlight-cat" style="color:#ef4444;">${label}</span> มากที่สุด` 
-        : `รายรับมาจาก <span class="highlight-cat" style="color:#10b981;">${label}</span> มากที่สุด`;
-
+    // --- 4. Render HTML ---
     container.innerHTML = `
-        <div class="insight-card animate-enter" style="border-color: ${isExpense ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}">
-            <div class="insight-icon" style="color: ${isExpense ? '#ef4444' : '#10b981'}; background: ${isExpense ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)'}">${icon}</div>
-            <div class="insight-info">
-                <h4>${titleText}</h4>
-                <p>${descText}</p>
-                <div style="font-size:0.9rem; color:#64748b; margin-top:0.2rem;">฿${maxVal.toLocaleString()}</div>
+        <div class="insight-card">
+            <div class="insight-header">
+                <i class="fas fa-chart-line"></i> วิเคราะห์พฤติกรรม
+            </div>
+            
+            <div>
+                คุณใช้จ่ายกับ <span style="font-weight:600; color:var(--primary-color);">${displayCat}</span> มากที่สุด
+                <div class="insight-highlight">
+                    <i class="${displayIcon}" style="margin-right:10px;"></i>
+                    ${maxPercent}%
+                </div>
+                <div style="font-size:0.9rem; color:var(--text-muted);">
+                    เป็นจำนวนเงิน ฿${displayVal}
+                </div>
+            </div>
+
+            <div class="advice-box advice-${healthStatus}">
+                <div style="font-weight:bold; margin-bottom:5px;">
+                    ${healthStatus === 'good' ? '✨' : (healthStatus === 'warning' ? '⚠️' : '🚨')} ${adviceTitle}
+                </div>
+                ${adviceText}
             </div>
         </div>
     `;
 }
+
 
 // Global Chart Event Listeners (ensure they are attached to window update logic is handled by init/updateChart)
 if (reportTypeExpense) reportTypeExpense.addEventListener('change', updateChart);

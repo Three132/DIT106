@@ -526,6 +526,186 @@ body, .card, .top-nav, .glass-pill-container, .list li {
     background: #ef4444;
     color: white;
 }
-[data-theme='dark'] .user-avatar {
-    border-color: rgba(255,255,255,0.2);
+/* --- Login Page Cute Gimmicks --- */
+
+/* Wrapper to handle stacking */
+.login-card-wrapper {
+    position: relative;
+    z-index: 10;
+    animation: floatCard 6s ease-in-out infinite;
 }
+
+@keyframes floatCard {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Peeking Cat */
+.cat-peeking {
+    position: absolute;
+    top: -110px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 160px;
+    z-index: 5; /* Behind card content but visually on top edge */
+    filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
+}
+
+.cat-eye {
+    animation: blink 4s infinite;
+    transform-origin: center;
+}
+
+@keyframes blink {
+    0%, 96%, 100% { transform: scaleY(1); }
+    98% { transform: scaleY(0.1); }
+}
+
+.pupil {
+    animation: lookAround 8s infinite;
+}
+
+@keyframes lookAround {
+    0%, 40% { transform: translate(0, 0); }
+    45% { transform: translate(-3px, 1px); }
+    50% { transform: translate(-3px, 1px); }
+    55% { transform: translate(3px, -1px); }
+    60% { transform: translate(3px, -1px); }
+    65% { transform: translate(0, 0); }
+}
+
+.paw {
+    animation: pawMove 3s ease-in-out infinite alternate;
+}
+@keyframes pawMove {
+    from { transform: translateY(0); }
+    to { transform: translateY(3px); }
+}
+
+/* Floating Blobs Background */
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    z-index: 1;
+    opacity: 0.6;
+}
+
+.blob-1 {
+    top: 10%;
+    left: 10%;
+    width: 300px;
+    height: 300px;
+    background: #4f46e5;
+    animation: floatBlob 10s infinite alternate;
+}
+
+.blob-2 {
+    bottom: 20%;
+    right: 10%;
+    width: 250px;
+    height: 250px;
+    background: #ec4899;
+    animation: floatBlob 12s infinite alternate-reverse;
+}
+
+@keyframes floatBlob {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(30px, -30px) scale(1.1); }
+}
+
+/* Adjust Login Card */
+.login-card {
+    position: relative;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.1) !important; /* increased transparency */
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    padding: 3rem 2rem !important;
+}
+
+.login-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.login-title span {
+    background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.login-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 300;
+    margin-bottom: 30px;
+    letter-spacing: 0.5px;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 1;
+}
+
+.fade-out {
+    opacity: 0;
+}
+
+/* --- Analysis & Insight Card --- */
+.insight-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 10px 30px -5px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.6);
+    transition: transform 0.3s ease;
+}
+
+[data-theme='dark'] .insight-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.insight-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.insight-highlight {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 0.5rem 0;
+}
+
+.advice-box {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-left: 4px solid #3b82f6;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-main);
+}
+
+[data-theme='dark'] .advice-box {
+    background: rgba(0,0,0,0.2);
+}
+
+.advice-good { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.advice-warning { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+.advice-danger { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }

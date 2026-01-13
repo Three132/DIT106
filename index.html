@@ -12,17 +12,25 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Login Page -->
+    <!-- Login Page (Overlay) -->
     <div id="login-page" class="login-container">
-        <div class="login-card">
-            <div class="login-icon">
-                <i class="fas fa-wallet"></i>
+        <!-- Floating Background Blobs -->
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        
+        <div class="login-card-wrapper">
+            <div class="login-card">
+                <div class="login-icon">
+                    <!-- <i class="fas fa-wallet"></i> Removed old icon -->
+                </div>
+                <h2 class="login-title">Smart Money <span>Tracker</span></h2>
+                <p id="login-subtitle" class="login-subtitle">วางแผนการเงินสู่อนาคตที่มั่นคง เริ่มต้นวันนี้</p>
+                
+                <button id="login-btn-main" class="login-google-btn">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20" style="vertical-align: middle; margin-right: 10px;">
+                    เข้าสู่ระบบด้วย Google
+                </button>
             </div>
-            <h1>Smart Money <span class="highlight">Tracker</span></h1>
-            <p>วางแผนการเงินสู่อนาคตที่มั่นคง เริ่มต้นวันนี้</p>
-            <button id="login-btn-main" class="btn login-google-btn">
-                <i class="fab fa-google"></i> เข้าสู่ระบบด้วย Google
-            </button>
         </div>
     </div>
 
