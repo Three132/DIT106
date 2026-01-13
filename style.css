@@ -475,6 +475,54 @@ body, .card, .top-nav, .glass-pill-container, .list li {
     transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* --- Dark Mode Form Overrides --- */
+[data-theme='dark'] .form-control input, 
+[data-theme='dark'] .form-control select {
+    background: rgba(30, 41, 59, 0.5); /* Semi-transparent dark slate */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+[data-theme='dark'] .form-control input:focus, 
+[data-theme='dark'] .form-control select:focus {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: #818cf8;
+}
+
+[data-theme='dark'] .type-toggle {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .toggle-btn {
+    color: #94a3b8;
+}
+
+/* Dark Mode Checked States for Toggles */
+[data-theme='dark'] #type-expense:checked ~ .expense-btn {
+    background: #7f1d1d; /* Dark Red */
+    color: #fecaca; /* Light Red */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+[data-theme='dark'] #type-income:checked ~ .income-btn {
+    background: #064e3b; /* Dark Green */
+    color: #6ee7b7; /* Light Green */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Fix placeholder color in dark mode */
+[data-theme='dark'] ::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Dark Mode Button */
+[data-theme='dark'] .btn {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.4);
+}
+
 /* User Profile Styles */
 .user-profile-pill {
     display: flex;
