@@ -1,25 +1,43 @@
-// Import Firebase SDKs
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-    getAuth, 
-    GoogleAuthProvider, 
-    signInWithPopup, 
-    signOut, 
-    onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    deleteDoc, 
-    doc, 
-    query, 
-    where, 
-    onSnapshot,
-    orderBy,
-    serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const console = { log: ()=>{} , error: ()=>{ } };
+const initializeApp = () => {};
+const getAuth = () => ({});
+const getFirestore = () => ({});
+const GoogleAuthProvider = function() {};
+const signInWithPopup = () => {};
+const signOut = () => {};
+const onAuthStateChanged = () => {};
+const collection = () => {};
+const addDoc = () => {};
+const deleteDoc = () => {};
+const doc = () => {};
+const query = () => {};
+const where = () => {};
+const onSnapshot = () => {};
+const orderBy = () => {};
+const serverTimestamp = () => {};
 
+const document = {
+  getElementById: (id) => {
+    return {
+      addEventListener: () => {},
+      style: {},
+      classList: { add: ()=>{}, remove: ()=>{} },
+      value: '',
+      checked: false,
+      querySelector: () => ({ className: '', style: {} })
+    };
+  },
+  createElement: () => ({ classList: { add: ()=>{} }, innerHTML: '' }),
+  documentElement: {
+    setAttribute: () => {},
+    getAttribute: () => 'light'
+  }
+};
+const localStorage = { getItem: () => null, setItem: () => {} };
+const Chart = { register: () => {} };
+const window = {};
+const setInterval = () => {};
+const setTimeout = () => {};
 // Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDHhVXPVnNbXf3EMvSoVDoJn-TjMDweAtM",
@@ -818,131 +836,3 @@ if (monthPicker) {
 
 // Initial Call (Will show empty until Auth loads)
 init();
-
-// --- Mock Data Generator (Temporary) ---
-window.generateMockData = async () => {
-    if (!currentUser) {
-        alert("กรุณาเข้าสู่ระบบก่อนสร้างข้อมูลจำลอง");
-        return;
-    }
-
-    const btn = document.getElementById('mock-btn');
-    if(btn) btn.innerText = "กำลังสร้างข้อมูล...";
-
-    const salaryDates = [new Date('2026-01-13'), new Date('2026-02-01'), new Date('2026-03-01'), new Date('2026-04-01')];
-    const installmentDates = [new Date('2026-01-15'), new Date('2026-02-05'), new Date('2026-03-05'), new Date('2026-04-05')];
-    let mockTransactions = [];
-    const pad = (n) => String(n).padStart(2, '0');
-    const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-    // 1. Add Salaries
-    for (const d of salaryDates) {
-        mockTransactions.push({
-            uid: currentUser.uid,
-            text: "เงินเดือน",
-            amount: 23000,
-            date: toDateStr(d),
-            category: 'salary',
-            createdAt: serverTimestamp()
-        });
-    }
-
-    // 2. Add Installments
-    for (const d of installmentDates) {
-        mockTransactions.push({
-            uid: currentUser.uid,
-            text: "ผ่อน MacBook",
-            amount: -3500,
-            date: toDateStr(d),
-            category: 'shopping',
-            createdAt: serverTimestamp()
-        });
-        mockTransactions.push({
-            uid: currentUser.uid,
-            text: "ผ่อน iPhone",
-            amount: -2300,
-            date: toDateStr(d),
-            category: 'shopping',
-            createdAt: serverTimestamp()
-        });
-    }
-
-    // 3. Setup Days (Jan 13 to Apr 18)
-    const startDate = new Date('2026-01-13');
-    const endDate = new Date('2026-04-18');
-    let days = [];
-    let current_d = new Date(startDate);
-    while (current_d <= endDate) {
-        days.push(new Date(current_d));
-        current_d.setDate(current_d.getDate() + 1);
-    }
-
-    // 4. Target Expenses Setup
-    const targetBalance = Math.floor(Math.random() * 10000) + 30000; // Expected balance between 30k to 40k
-    // Income = 23000 * 4 = 92000.  Fixed Expenses = 5800 * 4 = 23200
-    let remainingExpense = 92000 - 23200 - targetBalance;
-    
-    const expenseCats = ['food', 'transport', 'utilities', 'shopping', 'entertainment'];
-    
-    // 5. Generate Daily Expenses
-    for (let i = 0; i < days.length; i++) {
-        const d = days[i];
-        
-        let amount = Math.floor(remainingExpense / (days.length - i));
-        amount = Math.floor(amount * (0.6 + Math.random() * 0.8));
-        
-        if (amount < 30) amount = 50; 
-        
-        if (i === days.length - 1) {
-            amount = remainingExpense > 0 ? remainingExpense : 80;
-        }
-
-        let category = expenseCats[Math.floor(Math.random() * expenseCats.length)];
-        
-        let text = "";
-        if (category === 'food') text = ["ข้าวกะเพรา", "กาแฟ", "ชาบู", "ทานข้าวเย็น", "ข้าวกล่อง 7-11", "หมูกระทะ"][Math.floor(Math.random() * 6)];
-        else if (category === 'transport') text = ["ค่ารถไฟฟ้า", "เติมน้ำมัน", "ค่าแท็กซี่", "วินมอไซค์"][Math.floor(Math.random() * 4)];
-        else if (category === 'shopping') text = ["ของใช้ในบ้าน", "ซื้อของใช้ 7-11", "ครีมบำรุง", "Shopee/Lazada"][Math.floor(Math.random() * 4)];
-        else if (category === 'entertainment') text = ["ตั๋วหนัง", "ชำระค่า Netflix", "Spotify Premium", "ซื้อเกม"][Math.floor(Math.random() * 4)];
-        else if (category === 'utilities') text = ["บิลค่าไฟ", "ค่าน้ำประปา", "แพ็กเกจมือถือรายเดือน", "ค่าอินเทอร์เน็ต"][Math.floor(Math.random() * 4)];
-
-        mockTransactions.push({
-            uid: currentUser.uid,
-            text: text,
-            amount: -Math.abs(amount),
-            date: toDateStr(d),
-            category: category,
-            createdAt: serverTimestamp()
-        });
-        
-        remainingExpense -= amount;
-        
-        // Add a 30% chance for a second small expense on the same day
-        if (Math.random() > 0.7 && remainingExpense > 100 && i !== days.length - 1) {
-             let extraAmount = Math.floor(Math.random() * 80) + 30;
-             remainingExpense -= extraAmount;
-             mockTransactions.push({
-                uid: currentUser.uid,
-                text: "ซื้อของกินเล่น",
-                amount: -Math.abs(extraAmount), 
-                date: toDateStr(d),
-                category: 'food',
-                createdAt: serverTimestamp()
-            });
-        }
-    }
-
-    try {
-        let count = 0;
-        for (const tx of mockTransactions) {
-            await addDoc(collection(db, "transactions"), tx);
-            count++;
-        }
-        alert(`สร้างข้อมูลสำเร็จ ${count} รายการ! ข้อมูลจะแสดงผลทันที`);
-        if(btn) btn.style.display = "none";
-    } catch (error) {
-        console.error("Mock Data Error:", error);
-        alert("มีข้อผิดพลาด: " + error.message);
-        if(btn) btn.innerText = "สร้างข้อมูลใหม่";
-    }
-};
